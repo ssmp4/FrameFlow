@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Главная - FrameFlow{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 text-center">
+        <h1 class="display-4 mb-4">Добро пожаловать в FrameFlow</h1>
+        <p class="lead mb-4">
+            Создавайте интерактивные доски, делитесь идеями и сотрудничайте с другими в реальном времени.
+        </p>
+        
+        {% if not current_user.is_authenticated %}
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg px-4 gap-3">Начать бесплатно</a>
+            <a href="{{ url_for('login') }}" class="btn btn-outline-secondary btn-lg px-4">Войти</a>
+        </div>
+        {% else %}
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+            <a href="{{ url_for('boards') }}" class="btn btn-primary btn-lg px-4 gap-3">Мои доски</a>
+            <a href="{{ url_for('create_board') }}" class="btn btn-success btn-lg px-4">Создать доску</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-pencil-square display-4 text-primary mb-3"></i>
+                <h3>Создавайте</h3>
+                <p>Создавайте красивые доски для любых целей</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-share display-4 text-primary mb-3"></i>
+                <h3>Делитесь</h3>
+                <p>Приглашайте других к сотрудничеству</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-lightning display-4 text-primary mb-3"></i>
+                <h3>Сотрудничайте</h3>
+                <p>Работайте вместе в реальном времени</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

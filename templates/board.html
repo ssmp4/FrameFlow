@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}{{ board.title }} - FrameFlow{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ board.title }}</h1>
+        <div>
+            {% if can_edit %}
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#shareModal">
+                <i class="bi bi-share"></i> Поделиться
+            </button>
+            {% endif %}
+            <a href="{{ url_for('boards') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Назад
+            </a>
+        </div>
+    </div>
+
+    {% if board.description %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <p class="card-text">{{ board.description }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-8">
+            <div id="posts-container" class="row g-3">
+                {% for post in board.posts|sort(attribute='created_at', reverse=true) %}
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <p class="card-text">{{ post.content }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    {{ post.user.username }} • {{ post.created_at.strftime('%d.%m.%Y %H:%M') }}
+                                </small>
+                                {% if can_edit %}
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-primary edit-post" data-post-id="{{ post.id }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-post" data-post-id="{{ post.id }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="comments-section">
+                                {% for comment in post.comments|sort(attribute='created_at') %}
+                                <div class="comment mb-2">
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">{{ comment.user.username }}</small>
+                                        <small class="text-muted">{{ comment.created_at.strftime('%H:%M') }}</small>
+                                    </div>
+                                    <p class="mb-0">{{ comment.content }}</p>
+                                </div>
+                                {% endfor %}
+                                {% if can_comment %}
+                                <form class="comment-form mt-2" data-post-id="{{ post.id }}">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control form-control-sm" placeholder="Добавить комментарий...">
+                                        <button class="btn btn-sm btn-outline-primary" type="submit">
+                                            <i class="bi bi-send"></i>
+                                        </button>
+                                    </div>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-md-4">
+            {% if can_edit %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Создать пост</h5>
+                    <form id="create-post-form">
+                        <div class="mb-3">
+                            <textarea class="form-control" id="post-content" rows="3" placeholder="Что у вас нового?"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Опубликовать</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Доступ к доске</h5>
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ board.owner.username }}</strong>
+                                <small class="text-muted d-block">Владелец</small>
+                            </div>
+                            <div>
+                                <span class="badge bg-primary">Редактирование</span>
+                                <span class="badge bg-success">Комментирование</span>
+                            </div>
+                        </div>
+                        {% for share in board.shared_with %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ share.user.username }}</strong>
+                                <small class="text-muted d-block">Добавлен: {{ share.created_at.strftime('%d.%m.%Y') }}</small>
+                            </div>
+                            <div>
+                                {% if share.can_edit %}
+                                <span class="badge bg-primary">Редактирование</span>
+                                {% endif %}
+                                {% if share.can_comment %}
+                                <span class="badge bg-success">Комментирование</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для шаринга -->
+<div class="modal fade" id="shareModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Поделиться доской</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="share-form">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Имя пользователя</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="can-edit">
+                            <label class="form-check-label" for="can-edit">
+                                Разрешить редактирование
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="can-comment" checked>
+                            <label class="form-check-label" for="can-comment">
+                                Разрешить комментирование
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="share-button">Поделиться</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для редактирования поста -->
+<div class="modal fade" id="editPostModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактировать пост</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-post-form">
+                    <input type="hidden" id="edit-post-id">
+                    <div class="mb-3">
+                        <textarea class="form-control" id="edit-post-content" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="save-edit-button">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const boardId = {{ board.id }};
+    const canEdit = {{ 'true' if can_edit else 'false' }};
+    const canComment = {{ 'true' if can_comment else 'false' }};
+    const postsContainer = document.getElementById('posts-container');
+    const createPostForm = document.getElementById('create-post-form');
+    const shareForm = document.getElementById('share-form');
+    const shareButton = document.getElementById('share-button');
+    const editPostModal = new bootstrap.Modal(document.getElementById('editPostModal'));
+    const editPostForm = document.getElementById('edit-post-form');
+    const saveEditButton = document.getElementById('save-edit-button');
+    let currentEditPostId = null;
+
+    // Создание поста
+    if (createPostForm) {
+        createPostForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const content = document.getElementById('post-content').value;
+            
+            try {
+                const response = await fetch('/api/posts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content: content,
+                        board_id: boardId
+                    })
+                });
+                
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Ошибка при создании поста');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Произошла ошибка при создании поста');
+            }
+        });
+    }
+
+    // Шаринг доски
+    if (shareButton) {
+        shareButton.addEventListener('click', async function() {
+            const username = document.getElementById('username').value;
+            const canEdit = document.getElementById('can-edit').checked;
+            const canComment = document.getElementById('can-comment').checked;
+            
+            try {
+                const response = await fetch(`/board/${boardId}/share`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `username=${encodeURIComponent(username)}&can_edit=${canEdit}&can_comment=${canComment}`
+                });
+                
+                if (response.ok) {
+                    alert('Доска успешно открыта для пользователя');
+                    bootstrap.Modal.getInstance(document.getElementById('shareModal')).hide();
+                    shareForm.reset();
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Ошибка при шаринге доски');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Произошла ошибка при шаринге доски');
+            }
+        });
+    }
+
+    // Редактирование поста
+    if (canEdit) {
+        document.querySelectorAll('.edit-post').forEach(button => {
+            button.addEventListener('click', function() {
+                const postId = this.dataset.postId;
+                const postContent = this.closest('.card-body').querySelector('.card-text').textContent;
+                
+                document.getElementById('edit-post-id').value = postId;
+                document.getElementById('edit-post-content').value = postContent;
+                currentEditPostId = postId;
+                
+                editPostModal.show();
+            });
+        });
+    }
+
+    // Сохранение редактирования
+    if (saveEditButton) {
+        saveEditButton.addEventListener('click', async function() {
+            if (!currentEditPostId) return;
+            
+            const content = document.getElementById('edit-post-content').value;
+            
+            try {
+                const response = await fetch(`/api/posts/${currentEditPostId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content: content })
+                });
+                
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Ошибка при обновлении поста');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Произошла ошибка при обновлении поста');
+            }
+        });
+    }
+
+    // Удаление поста
+    if (canEdit) {
+        document.querySelectorAll('.delete-post').forEach(button => {
+            button.addEventListener('click', async function() {
+                if (!confirm('Вы уверены, что хотите удалить этот пост?')) return;
+                
+                const postId = this.dataset.postId;
+                
+                try {
+                    const response = await fetch(`/api/posts/${postId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        const error = await response.json();
+                        alert(error.error || 'Ошибка при удалении поста');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при удалении поста');
+                }
+            });
+        });
+    }
+
+    // Добавление комментария
+    if (canComment) {
+        document.querySelectorAll('.comment-form').forEach(form => {
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const postId = this.dataset.postId;
+                const content = this.querySelector('input').value;
+                
+                try {
+                    const response = await fetch(`/api/posts/${postId}/comments`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ content: content })
+                    });
+                    
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        const error = await response.json();
+                        alert(error.error || 'Ошибка при добавлении комментария');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при добавлении комментария');
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %} 
